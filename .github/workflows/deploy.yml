@@ -27,8 +27,7 @@ jobs:
       - name: Tool versions
         shell: pwsh
         run: |
-          cmake --version
-          ninja --version
+          if (Get-Command msbuild -ErrorAction SilentlyContinue) { msbuild -version }
           python --version
 
       - name: Download ThirdParty.zip from Google Drive
@@ -53,12 +52,14 @@ jobs:
           Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item $targetDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $extractDir | Out-Null
+          New-Item -ItemType Directory -Path $targetDir | Out-Null
 
           Expand-Archive -Path "${{ github.workspace }}\ThirdParty.zip" -DestinationPath $extractDir -Force
 
           $candidate = $null
 
-          if ((Test-Path (Join-Path $extractDir "inc\fmod_dsp.h")) -and
+          if ((Test-Path (Join-Path $extractDir "inc\fmod.h")) -and
+              (Test-Path (Join-Path $extractDir "inc\fmod_dsp.h")) -and
               (Test-Path (Join-Path $extractDir "lib\fmod_vc.lib")) -and
               (Test-Path (Join-Path $extractDir "lib\fmodstudio_vc.lib"))) {
             $candidate = Get-Item $extractDir
@@ -66,6 +67,7 @@ jobs:
 
           if (-not $candidate) {
             $candidate = Get-ChildItem -Path $extractDir -Directory -Recurse | Where-Object {
+              (Test-Path (Join-Path $_.FullName "inc\fmod.h")) -and
               (Test-Path (Join-Path $_.FullName "inc\fmod_dsp.h")) -and
               (Test-Path (Join-Path $_.FullName "lib\fmod_vc.lib")) -and
               (Test-Path (Join-Path $_.FullName "lib\fmodstudio_vc.lib"))
@@ -73,10 +75,10 @@ jobs:
           }
 
           if (-not $candidate) {
-            throw "ThirdParty directory not found inside ThirdParty.zip."
+            throw "FMOD SDK directory not found inside ThirdParty.zip."
           }
 
-          Copy-Item -Path $candidate.FullName -Destination $targetDir -Recurse -Force
+          Copy-Item -Path (Join-Path $candidate.FullName "*") -Destination $targetDir -Recurse -Force
 
       - name: Validate FMOD SDK files
         shell: pwsh
@@ -91,16 +93,32 @@ jobs:
             throw "FMOD studio lib not found: $env:FMOD_SDK_PATH\lib\fmodstudio_vc.lib"
           }
 
-      - name: Configure
+      - name: Locate MSBuild
         shell: pwsh
         run: |
-          cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}\build\windows" -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DFMOD_SDK_PATH="$env:FMOD_SDK_PATH"
+          $ErrorActionPreference = "Stop"
+          $msbuild = Get-Command msbuild -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
+          if (-not $msbuild) {
+            $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+            if (!(Test-Path $vswhere)) {
+              throw "MSBuild was not found."
+            }
 
-      - name: Build
+            $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+          }
+
+          if (-not $msbuild) {
+            throw "MSBuild was not found."
+          }
+
+          Write-Host "MSBuild: $msbuild"
+          Add-Content -Path $env:GITHUB_ENV -Value "MSBUILD_PATH=$msbuild"
+
+      - name: Build slnx solution
         shell: pwsh
-        run: cmake --build "${{ github.workspace }}\build\windows" --config Release --verbose
+        run: |
+          $ErrorActionPreference = "Stop"
+          & $env:MSBUILD_PATH "${{ github.workspace }}\FMODThunderStormPlugin.slnx" /m /p:Configuration=Release /p:Platform=x64 /verbosity:minimal
 
       - name: Collect release files
         shell: pwsh
@@ -110,8 +128,8 @@ jobs:
           Remove-Item $deployDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $deployDir | Out-Null
 
-          $dll = Get-ChildItem -Path "${{ github.workspace }}\build\windows" -Recurse -Filter "FMODThunderStormPlugin.dll" | Select-Object -First 1
-          $pluginJs = Get-ChildItem -Path "${{ github.workspace }}" -Recurse -Filter "FMODThunderStormPlugin.plugin.js" | Select-Object -First 1
+          $dll = Get-ChildItem -Path "${{ github.workspace }}\x64\Release" -Recurse -Filter "FMODThunderStormPlugin.dll" | Select-Object -First 1
+          $pluginJs = Get-Item "${{ github.workspace }}\FMODThunderStormPlugin.plugin.js"
 
           if (-not $dll) { throw "FMODThunderStormPlugin.dll was not found." }
           if (-not $pluginJs) { throw "FMODThunderStormPlugin.plugin.js was not found." }

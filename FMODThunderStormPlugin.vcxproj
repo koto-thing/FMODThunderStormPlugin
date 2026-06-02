@@ -25,6 +25,9 @@
     <RootNamespace>FMODThunderStormPlugin</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <FMOD_SDK_PATH Condition="'$(FMOD_SDK_PATH)'==''">$(SolutionDir)ThirdParty</FMOD_SDK_PATH>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -109,13 +112,13 @@
       <PreprocessorDefinitions>_DEBUG;CPPDYNAMICLIBRARYTEMPLATE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>D:\ProgramFiles\FMOD Studio API Windows\api\core\inc;D:\ProgramFiles\FMOD Studio API Windows\api\studio\inc;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(FMOD_SDK_PATH)\inc;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\ProgramFiles\FMOD Studio API Windows\api\studio\lib\x64;D:\ProgramFiles\FMOD Studio API Windows\api\core\lib\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(FMOD_SDK_PATH)\lib;</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);fmod_vc.lib;fmodL_vc.lib;fmodstudio_vc.lib;fmodstudioL_vc.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -149,7 +152,7 @@
       <PreprocessorDefinitions>NDEBUG;CPPDYNAMICLIBRARYTEMPLATE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>D:\ProgramFiles\FMOD Studio API Windows\api\core\inc;D:\ProgramFiles\FMOD Studio API Windows\api\studio\inc;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(FMOD_SDK_PATH)\inc;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -157,7 +160,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\ProgramFiles\FMOD Studio API Windows\api\studio\lib\x64;D:\ProgramFiles\FMOD Studio API Windows\api\core\lib\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(FMOD_SDK_PATH)\lib;</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);fmod_vc.lib;fmodstudio_vc.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
