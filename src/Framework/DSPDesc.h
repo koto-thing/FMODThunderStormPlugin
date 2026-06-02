@@ -1,0 +1,11 @@
+#ifndef FMODTHUNDERSTORMPLUGIN_DSPDESC_H
+#define FMODTHUNDERSTORMPLUGIN_DSPDESC_H
+
+#include "fmod.h"
+#include "fmod_dsp.h"
+
+extern "C" {
+    F_EXPORT FMOD_DSP_DESCRIPTION* FMODGetDSPDescription();
+} 
+
+#endif // FMODTHUNDERSTORMPLUGIN_DSPDESC_H
