@@ -1,0 +1,128 @@
+name: deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-windows:
+    name: Deploy (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      FMOD_DRIVE_FILE_ID: 1oTG2dKqaCkCf5FtpTiPsttwsLkcXsQbf
+      FMOD_SDK_PATH: ${{ github.workspace }}\ThirdParty
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Tool versions
+        shell: pwsh
+        run: |
+          cmake --version
+          ninja --version
+          python --version
+
+      - name: Download ThirdParty.zip from Google Drive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install --upgrade pip
+          python -m pip install gdown
+          python -m gdown "https://drive.google.com/uc?id=$env:FMOD_DRIVE_FILE_ID" -O "${{ github.workspace }}\ThirdParty.zip"
+
+          if (!(Test-Path "${{ github.workspace }}\ThirdParty.zip")) {
+            throw "ThirdParty.zip download failed."
+          }
+
+      - name: Extract ThirdParty.zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $extractDir = "${{ github.workspace }}\_thirdparty_extract"
+          $targetDir = "${{ github.workspace }}\ThirdParty"
+
+          Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item $targetDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $extractDir | Out-Null
+
+          Expand-Archive -Path "${{ github.workspace }}\ThirdParty.zip" -DestinationPath $extractDir -Force
+
+          $candidate = $null
+
+          if ((Test-Path (Join-Path $extractDir "inc\fmod_dsp.h")) -and
+              (Test-Path (Join-Path $extractDir "lib\fmod_vc.lib")) -and
+              (Test-Path (Join-Path $extractDir "lib\fmodstudio_vc.lib"))) {
+            $candidate = Get-Item $extractDir
+          }
+
+          if (-not $candidate) {
+            $candidate = Get-ChildItem -Path $extractDir -Directory -Recurse | Where-Object {
+              (Test-Path (Join-Path $_.FullName "inc\fmod_dsp.h")) -and
+              (Test-Path (Join-Path $_.FullName "lib\fmod_vc.lib")) -and
+              (Test-Path (Join-Path $_.FullName "lib\fmodstudio_vc.lib"))
+            } | Select-Object -First 1
+          }
+
+          if (-not $candidate) {
+            throw "ThirdParty directory not found inside ThirdParty.zip."
+          }
+
+          Copy-Item -Path $candidate.FullName -Destination $targetDir -Recurse -Force
+
+      - name: Validate FMOD SDK files
+        shell: pwsh
+        run: |
+          if (!(Test-Path "$env:FMOD_SDK_PATH\inc\fmod_dsp.h")) {
+            throw "FMOD header not found: $env:FMOD_SDK_PATH\inc\fmod_dsp.h"
+          }
+          if (!(Test-Path "$env:FMOD_SDK_PATH\lib\fmod_vc.lib")) {
+            throw "FMOD core lib not found: $env:FMOD_SDK_PATH\lib\fmod_vc.lib"
+          }
+          if (!(Test-Path "$env:FMOD_SDK_PATH\lib\fmodstudio_vc.lib")) {
+            throw "FMOD studio lib not found: $env:FMOD_SDK_PATH\lib\fmodstudio_vc.lib"
+          }
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}\build\windows" -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DFMOD_SDK_PATH="$env:FMOD_SDK_PATH"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build "${{ github.workspace }}\build\windows" --config Release --verbose
+
+      - name: Collect release files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $deployDir = "${{ github.workspace }}\deploy"
+          Remove-Item $deployDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $deployDir | Out-Null
+
+          $dll = Get-ChildItem -Path "${{ github.workspace }}\build\windows" -Recurse -Filter "FMODThunderStormPlugin.dll" | Select-Object -First 1
+          $pluginJs = Get-ChildItem -Path "${{ github.workspace }}" -Recurse -Filter "FMODThunderStormPlugin.plugin.js" | Select-Object -First 1
+
+          if (-not $dll) { throw "FMODThunderStormPlugin.dll was not found." }
+          if (-not $pluginJs) { throw "FMODThunderStormPlugin.plugin.js was not found." }
+
+          Copy-Item $dll.FullName -Destination (Join-Path $deployDir "FMODThunderStormPlugin.dll") -Force
+          Copy-Item $pluginJs.FullName -Destination (Join-Path $deployDir "FMODThunderStormPlugin.plugin.js") -Force
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FMODThunderStormPlugin-deploy
+          if-no-files-found: error
+          path: |
+            ${{ github.workspace }}\deploy\FMODThunderStormPlugin.dll
+            ${{ github.workspace }}\deploy\FMODThunderStormPlugin.plugin.js
+
