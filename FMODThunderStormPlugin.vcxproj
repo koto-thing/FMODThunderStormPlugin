@@ -166,6 +166,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="src\Domain\DSP\DynamicsCompressor.cpp" />
+    <ClCompile Include="src\Domain\DSP\PinkNoiseGenerator.cpp" />
+    <ClCompile Include="src\Domain\Rain\RainDropVoice.cpp" />
+    <ClCompile Include="src\Domain\Thunder\Afterimage.cpp" />
+    <ClCompile Include="src\Domain\Thunder\Deepener.cpp" />
+    <ClCompile Include="src\Domain\Thunder\LightningStrike.cpp" />
+    <ClCompile Include="src\Domain\Thunder\Rumbler.cpp" />
     <ClCompile Include="src\Framework\DSPCallbacks.cpp" />
     <ClCompile Include="src\Framework\DSPDesc.cpp" />
     <ClCompile Include="src\InterfaceAdapter\ParameterDesc.cpp" />
@@ -175,6 +182,16 @@
     <Folder Include="src\Domain\" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Domain\DSP\DynamicsCompressor.h" />
+    <ClInclude Include="src\Domain\DSP\HighPassFilter.h" />
+    <ClInclude Include="src\Domain\DSP\LowPassFilter.h" />
+    <ClInclude Include="src\Domain\DSP\PinkNoiseGenerator.h" />
+    <ClInclude Include="src\Domain\DSP\StateVariableFilter.h" />
+    <ClInclude Include="src\Domain\Rain\RainDropVoice.h" />
+    <ClInclude Include="src\Domain\Thunder\Afterimage.h" />
+    <ClInclude Include="src\Domain\Thunder\Deepener.h" />
+    <ClInclude Include="src\Domain\Thunder\LightningStrike.h" />
+    <ClInclude Include="src\Domain\Thunder\Rumbler.h" />
     <ClInclude Include="src\Framework\DSPCallbacks.h" />
     <ClInclude Include="src\Framework\DSPDesc.h" />
     <ClInclude Include="src\Framework\FMODAllocator.h" />
